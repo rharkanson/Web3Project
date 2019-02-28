@@ -1,0 +1,50 @@
+body {
+  background-color:#F0F0F0;
+  padding: 2em;
+  font-family: 'Helvetica', serif;
+}
+
+.container {
+  width: 50%;
+  margin: 0 auto;
+}
+
+label {
+  display:block;
+  margin-bottom:10px;
+}
+
+input {
+  padding:10px;
+  width: 100%;
+  font-size: 1.2em;
+  margin-bottom: 1em;
+}
+
+pre {
+  padding: 1em;
+  width: 100%;
+  background-color:#fff;
+  margin: 1em 0;
+  border: 1px solid #888888;
+  font-family: 'Source Code Pro', sans-serif;
+}
+
+.btns {
+  margin: 1em 0em 4em 0em;
+  padding: 1em 4em;
+  font-size: 1.2em;
+  display:block;
+}
+
+#employee {
+  padding: 1em;
+  width: 100%;
+  background-color:#fff;
+  margin: 1em 0;
+  border: 1px solid #888888;
+}
+
+.red {
+  color: #f00;
+}

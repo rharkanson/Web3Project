@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <title>Web3Project</title>
+    <link rel="stylesheet" type="text/css" href="stylesheets/style.css">
+</head>
+
+<body>
+<div class="container">
+
+    <h1>Contract</h1>
+    <label for="contract" class="col-lg-2 control-label">Contract Address (blank to deploy new)</label>
+    <input id="contract" type="text">
+    <label for="accounts" class="col-lg-2 control-label">Account Addresses (space separated, first is default)</label>
+    <input id="accounts" type="text">
+
+    <button id="get_contract" class="btns">Load/Deploy Contract</button>
+
+    <h1>Employee</h1>
+    <h2 id="employee"></h2>
+
+    <label for="name" class="col-lg-2 control-label">Employee Name</label>
+    <input id="name" type="text">
+
+    <label for="name" class="col-lg-2 control-label">Employee Age</label>
+    <input id="age" type="text">
+
+    <button id="set_employee" class="btns">Set Employee</button>
+
+
+    <h1>Smart Contract</h1>
+    <pre>
+pragma solidity ^0.4.24;
+
+contract Employee {
+  string fName;
+  uint age;
+
+  event EmployeeUpdate(string name, uint age);
+
+  function setEmployee(string _fName, uint _age) public {
+    fName = _fName;
+    age = _age;
+    emit EmployeeUpdate(_fName, _age);
+  }
+
+  function getEmployee() public constant returns (string, uint) {
+      return (fName, age);
+  }
+
+}
+    </pre>
+
+</div>
+
+
+<script type="text/javascript" src="dist/jquery.min.js"></script>
+<script type="text/javascript" src="dist/web3.min.js"></script>
+<script type="text/javascript">
+
+  // === PARAMETERS ========================================
+  var HTTP_PROVIDER = ""; // Required if not using injection (MetaMask)
+  var ADDR_CONTRACT = ""; // Empty string deploys new contract
+  var ADDR_ACCOUNTS = []; // First is default, filled by MetaMask
+  
+  var EMPLOYEE_ABI; // Contract class with ABI
+  var EMPLOYEE; // Contract instance
+  var EMPLOYEE_UPDATE; // Update event
+  var SET_EMP_GAS = 4700000; // Gas required to call set function
+
+
+  // === METHODS ===========================================
+  function displayEmployee (name, age) {
+    $("#employee").html(name +' (' + age + ' years old)');
+  }
+
+  function getEmployee () {
+    EMPLOYEE.getEmployee(function(error, result){
+      if(!error)
+        displayEmployee(result[0], result[1]);
+      else
+        console.error(error);
+    });
+  }
+
+  function setEmployee () {
+    // Load the two args in from page
+    var emp_name = $("#name").val();
+    var emp_age = $("#age").val();
+
+    // Call set with fixed gas
+    EMPLOYEE.setEmployee(emp_name, emp_age, {from: ADDR_ACCOUNTS[0], gas: SET_EMP_GAS}, function (error, result) {
+      if (error)
+        console.error(error);
+      $("#name").val("");
+      $("#age").val("");
+    });
+  }
+
+
+  function contractLoaded() {
+    // If a listener already exists, stop it
+    if (typeof EMPLOYEE_UPDATE !== 'undefined')
+      EMPLOYEE_UPDATE.stopWatching();
+
+    // Create new listener for the event
+    EMPLOYEE_UPDATE = EMPLOYEE.EmployeeUpdate();
+    EMPLOYEE_UPDATE.watch(function (error, result) {
+      if(!error)
+        displayEmployee(result.args.name, result.args.age);
+      else
+        console.error(error);
+    });
+    getEmployee();
+  }
+
+
+  function contractChanged() {
+    // Update addresses
+    ADDR_CONTRACT = $('#contract').val().toString();
+    ADDR_ACCOUNTS = $('#accounts').val().toString().split(' ');
+    web3.eth.defaultAccount = "";
+    if (ADDR_ACCOUNTS.length > 0)
+      web3.eth.defaultAccount = ADDR_ACCOUNTS[0];
+
+
+    // Either DEPLOY new contract or LOAD existing
+    //  DEPLOY) Object instance to be deployed
+    if (ADDR_CONTRACT === "") {
+      EMPLOYEE = EMPLOYEE_ABI.new({
+            from: ADDR_ACCOUNTS[0],
+            data: '0x608060405234801561001057600080fd5b5061039e806100206000396000f30060806040526004361061004c576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff1680634132db8f146100515780634c9a53be146100e8575b600080fd5b34801561005d57600080fd5b5061006661015b565b6040518080602001838152602001828103825284818151815260200191508051906020019080838360005b838110156100ac578082015181840152602081019050610091565b50505050905090810190601f1680156100d95780820380516001836020036101000a031916815260200191505b50935050505060405180910390f35b3480156100f457600080fd5b50610159600480360381019080803590602001908201803590602001908080601f016020809104026020016040519081016040528093929190818152602001838380828437820191505050505050919291929080359060200190929190505050610207565b005b6060600080600154818054600181600116156101000203166002900480601f0160208091040260200160405190810160405280929190818152602001828054600181600116156101000203166002900480156101f85780601f106101cd576101008083540402835291602001916101f8565b820191906000526020600020905b8154815290600101906020018083116101db57829003601f168201915b50505050509150915091509091565b816000908051906020019061021d9291906102cd565b50806001819055507f9f174d44ad91835440ff163551877bbac53660e78c5b413378db78126219357082826040518080602001838152602001828103825284818151815260200191508051906020019080838360005b8381101561028e578082015181840152602081019050610273565b50505050905090810190601f1680156102bb5780820380516001836020036101000a031916815260200191505b50935050505060405180910390a15050565b828054600181600116156101000203166002900490600052602060002090601f016020900481019282601f1061030e57805160ff191683800117855561033c565b8280016001018555821561033c579182015b8281111561033b578251825591602001919060010190610320565b5b509050610349919061034d565b5090565b61036f91905b8082111561036b576000816000905550600101610353565b5090565b905600a165627a7a72305820a5dbf40e91e2dfa878ac4fce394312c3a10a75e43e880a2aad802306f6b1df4b0029',
+            gas: '4700000'
+          },
+          function (e, contract) {
+            if (typeof contract.address !== 'undefined') {
+              ADDR_CONTRACT = contract.address;
+              $('#contract').val(ADDR_CONTRACT.toString());
+              console.log('Contract mined! address: ' + contract.address + ' transactionHash: ' + contract.transactionHash);
+              contractLoaded();
+            }
+          });
+    }
+
+    //  LOAD) Object instance to be loaded
+    else {
+      EMPLOYEE = EMPLOYEE_ABI.at(ADDR_CONTRACT);
+      console.log('Contract loaded! address: ' + EMPLOYEE.address);
+      contractLoaded();
+    }
+  }
+
+
+  
+  // === ENTRY POINT =======================================
+  $(document).ready(function () {
+
+    // --- ERROR CHECKING ----------------------------------
+    // Ensure there is a Web3 object at all
+    if (typeof Web3 === 'undefined') {
+      $("#employee").html('Web3 Object Undefined').addClass('red');
+      throw new Error("Web3 Object Undefined");
+    }
+
+    // If web3 instance created elsewhere (metamask) grab it, otherwise create it now
+    if (typeof web3 !== 'undefined') {
+      web3 = new Web3(web3.currentProvider);
+    } else {
+      web3 = new Web3(new Web3.providers.HttpProvider(HTTP_PROVIDER));
+    }
+
+    // Ensure web3 version is < 1.0.0
+    // Using API: https://github.com/ethereum/wiki/wiki/JavaScript-API
+    if (web3.version.api.split('.')[0] !== "0") {
+      $("#employee").html('Web3 Version ' + web3.version.api + ' Not Supported').addClass('red');
+      throw new Error('Web3 Version ' + web3.version.api + ' Not Supported');
+    }
+
+    
+    // --- SMART CONTRACT ------------------------------------
+    // Remix compiler version 0.4.25
+    // Loaded from: 'Compile' tab > 'Employee' contract pulldown > 'Details' button > Copy 'Web3Deploy'
+    // Class object defined by ABI (modified version of first of line from 'Web3Deploy'):
+    EMPLOYEE_ABI = web3.eth.contract([{"constant":true,"inputs":[],"name":"getEmployee","outputs":[{"name":"","type":"string"},{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"_fName","type":"string"},{"name":"_age","type":"uint256"}],"name":"setEmployee","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"anonymous":false,"inputs":[{"indexed":false,"name":"name","type":"string"},{"indexed":false,"name":"age","type":"uint256"}],"name":"EmployeeUpdate","type":"event"}]);
+
+
+    // --- CONTRACT AND ACCOUNTS ---------------------------
+    $('#contract').val(ADDR_CONTRACT);
+    $('#accounts').val(ADDR_ACCOUNTS.join(' '));
+    $('#get_contract').click(contractChanged);
+    $("#set_employee").click(setEmployee);
+
+    if (ADDR_ACCOUNTS.length < 1)
+      web3.eth.getAccounts(function (error, result) {
+        ADDR_ACCOUNTS = result;
+        $('#accounts').val(ADDR_ACCOUNTS.join(' '));
+      });
+  });
+
+
+</script>
+
+</body>
+</html>
+
